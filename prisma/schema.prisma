@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+}
+
+enum CoachingStage {
+  OPENING
+  QUALIFICATION
+  PITCH
+  OBJECTIONS
+  CLOSE
+  FOLLOW_UP
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  role         UserRole
+  notes        CoachingNote[]
+  createdAt    DateTime       @default(now())
+}
+
+model Company {
+  id      String   @id @default(cuid())
+  name    String
+  sellers Seller[]
+}
+
+model Seller {
+  id                String             @id @default(cuid())
+  companyId         String
+  fullName          String
+  active            Boolean            @default(true)
+  company           Company            @relation(fields: [companyId], references: [id])
+  shifts            Shift[]
+  notes             CoachingNote[]
+  aiRecommendations AiRecommendation[]
+
+  @@index([companyId])
+}
+
+model Shift {
+  id            String   @id @default(cuid())
+  sellerId      String
+  date          DateTime
+  hoursWorked   Float
+  conversations Int
+  salesCount    Int
+  totalCost     Float?
+  seller        Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, date])
+}
+
+model CoachingNote {
+  id              String        @id @default(cuid())
+  sellerId        String
+  date            DateTime
+  stage           CoachingStage
+  reason          String
+  details         String
+  createdByUserId String
+  seller          Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  createdBy       User          @relation(fields: [createdByUserId], references: [id])
+
+  @@index([sellerId, date])
+  @@index([stage])
+}
+
+model AiRecommendation {
+  id          String   @id @default(cuid())
+  sellerId    String
+  createdAt   DateTime @default(now())
+  payloadJson Json
+  seller      Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, createdAt])
+}
